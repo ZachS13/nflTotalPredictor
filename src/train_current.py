@@ -4,13 +4,21 @@ from pathlib import Path
 import torch
 from sklearn.preprocessing import StandardScaler
 
-from data_loader import (
-    load_processed_data,
-    FEATURE_COLUMNS,
-    TARGET_COLUMN
-)
+try:
+    from src.data_loader import (
+        load_processed_data,
+        FEATURE_COLUMNS,
+        TARGET_COLUMN
+    )
+    from src.model import NFLTotalModel
 
-from model import NFLTotalModel
+except ModuleNotFoundError:
+    from data_loader import (
+        load_processed_data,
+        FEATURE_COLUMNS,
+        TARGET_COLUMN
+    )
+    from model import NFLTotalModel
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent

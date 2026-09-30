@@ -5,16 +5,29 @@ from pathlib import Path
 import pandas as pd
 import torch
 
-from data_loader import FEATURE_COLUMNS
-from model import NFLTotalModel
+try:
+    from src.data_loader import FEATURE_COLUMNS
+    from src.model import NFLTotalModel
 
-from preprocess import (
-    load_data,
-    clean_regular_season_games,
-    create_team_history,
-    get_team_features,
-    update_team_history
-)
+    from src.preprocess import (
+        load_data,
+        clean_regular_season_games,
+        create_team_history,
+        get_team_features,
+        update_team_history
+    )
+
+except ModuleNotFoundError:
+    from data_loader import FEATURE_COLUMNS
+    from model import NFLTotalModel
+
+    from preprocess import (
+        load_data,
+        clean_regular_season_games,
+        create_team_history,
+        get_team_features,
+        update_team_history
+    )
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent

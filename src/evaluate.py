@@ -11,9 +11,12 @@ from model import NFLTotalModel
 
 
 def evaluate_model():
+
     df = load_processed_data()
 
-    train_df, val_df, test_df = split_data(df)
+    train_df, val_df, test_df = split_data(
+        df
+    )
 
     (
         X_train,
@@ -30,44 +33,88 @@ def evaluate_model():
     )
 
     model = NFLTotalModel(
-        input_size=len(FEATURE_COLUMNS)
+        input_size=len(
+            FEATURE_COLUMNS
+        )
     )
 
     model.load_state_dict(
-        torch.load("models/nfl_total_model.pth")
+        torch.load(
+            "models/nfl_total_model.pth"
+        )
     )
 
     model.eval()
 
     with torch.no_grad():
-        predictions = model(X_test)
 
-        mae = torch.mean(
-            torch.abs(predictions - y_test)
-        )
+        residual_predictions = model(
+            X_test
+        ).squeeze()
 
-        mse = torch.mean(
-            (predictions - y_test) ** 2
-        )
-
-        rmse = torch.sqrt(mse)
-
-    # Simple baseline: add each team's scoring average
-    baseline_predictions = (
-        test_df["home_ppg"] +
-        test_df["away_ppg"]
+    baseline_predictions = torch.tensor(
+        test_df[
+            "baseline_total"
+        ].values,
+        dtype=torch.float32
     )
 
-    baseline_actual = test_df["total_points"]
+    actual_totals = torch.tensor(
+        test_df[
+            "total_points"
+        ].values,
+        dtype=torch.float32
+    )
 
-    baseline_mae = (
-        baseline_predictions - baseline_actual
-    ).abs().mean()
+    final_predictions = (
+        baseline_predictions
+        + residual_predictions
+    )
 
-    print(f"Test Games: {len(y_test)}")
-    print(f"Neural Network MAE: {mae.item():.2f}")
-    print(f"Neural Network RMSE: {rmse.item():.2f}")
-    print(f"Baseline MAE: {baseline_mae:.2f}")
+    neural_mae = torch.mean(
+        torch.abs(
+            final_predictions
+            - actual_totals
+        )
+    )
+
+    neural_mse = torch.mean(
+        (
+            final_predictions
+            - actual_totals
+        ) ** 2
+    )
+
+    neural_rmse = torch.sqrt(
+        neural_mse
+    )
+
+    baseline_mae = torch.mean(
+        torch.abs(
+            baseline_predictions
+            - actual_totals
+        )
+    )
+
+    print(
+        f"Test Games: "
+        f"{len(actual_totals)}"
+    )
+
+    print(
+        f"Residual Neural Network MAE: "
+        f"{neural_mae.item():.2f}"
+    )
+
+    print(
+        f"Residual Neural Network RMSE: "
+        f"{neural_rmse.item():.2f}"
+    )
+
+    print(
+        f"Baseline MAE: "
+        f"{baseline_mae.item():.2f}"
+    )
 
 
 if __name__ == "__main__":

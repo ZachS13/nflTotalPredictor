@@ -11,9 +11,13 @@ from model import NFLTotalModel
 
 
 def train_model():
+
     # Load and prepare data
     df = load_processed_data()
-    train_df, val_df, test_df = split_data(df)
+
+    train_df, val_df, test_df = split_data(
+        df
+    )
 
     (
         X_train,
@@ -29,9 +33,11 @@ def train_model():
         test_df
     )
 
-    # Create model, loss function, and optimizer
+    # Create model
     model = NFLTotalModel(
-        input_size=len(FEATURE_COLUMNS)
+        input_size=len(
+            FEATURE_COLUMNS
+        )
     )
 
     criterion = torch.nn.MSELoss()
@@ -41,13 +47,16 @@ def train_model():
         lr=0.001
     )
 
-    # Train the model
+    # Train model
     epochs = 300
 
     for epoch in range(epochs):
+
         model.train()
 
-        predictions = model(X_train)
+        predictions = model(
+            X_train
+        )
 
         loss = criterion(
             predictions,
@@ -55,15 +64,21 @@ def train_model():
         )
 
         optimizer.zero_grad()
+
         loss.backward()
+
         optimizer.step()
 
         # Check validation performance
         if (epoch + 1) % 25 == 0:
+
             model.eval()
 
             with torch.no_grad():
-                val_predictions = model(X_val)
+
+                val_predictions = model(
+                    X_val
+                )
 
                 val_loss = criterion(
                     val_predictions,
@@ -71,23 +86,32 @@ def train_model():
                 )
 
                 val_mae = torch.mean(
-                    torch.abs(val_predictions - y_val)
+                    torch.abs(
+                        val_predictions
+                        - y_val
+                    )
                 )
 
             print(
                 f"Epoch {epoch + 1}/{epochs} "
-                f"- Train Loss: {loss.item():.2f} "
-                f"- Val Loss: {val_loss.item():.2f} "
-                f"- Val MAE: {val_mae.item():.2f}"
+                f"- Train Loss: "
+                f"{loss.item():.2f} "
+                f"- Val Loss: "
+                f"{val_loss.item():.2f} "
+                f"- Val MAE: "
+                f"{val_mae.item():.2f}"
             )
 
-    # Save trained model
+    # Save model
     torch.save(
         model.state_dict(),
         "models/nfl_total_model.pth"
     )
 
-    print("\nModel saved to models/nfl_total_model.pth")
+    print(
+        "\nModel saved to "
+        "models/nfl_total_model.pth"
+    )
 
     return model
 

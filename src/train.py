@@ -23,7 +23,11 @@ def train_model():
         y_val,
         y_test,
         scaler
-    ) = prepare_data(train_df, val_df, test_df)
+    ) = prepare_data(
+        train_df,
+        val_df,
+        test_df
+    )
 
     # Create model, loss function, and optimizer
     model = NFLTotalModel(
@@ -44,12 +48,17 @@ def train_model():
         model.train()
 
         predictions = model(X_train)
-        loss = criterion(predictions, y_train)
+
+        loss = criterion(
+            predictions,
+            y_train
+        )
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
+        # Check validation performance
         if (epoch + 1) % 25 == 0:
             model.eval()
 
@@ -71,6 +80,16 @@ def train_model():
                 f"- Val Loss: {val_loss.item():.2f} "
                 f"- Val MAE: {val_mae.item():.2f}"
             )
+
+    # Save trained model
+    torch.save(
+        model.state_dict(),
+        "models/nfl_total_model.pth"
+    )
+
+    print("\nModel saved to models/nfl_total_model.pth")
+
+    return model
 
 
 if __name__ == "__main__":

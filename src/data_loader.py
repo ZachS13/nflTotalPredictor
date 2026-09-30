@@ -4,9 +4,8 @@ import torch
 from sklearn.preprocessing import StandardScaler
 
 
-PROCESSED_DATA_PATH = (
-    "data/processed/2010-2026_scores_processed.csv"
-)
+PROCESSED_DATA_PATH = "data/processed/2010-2026_scores_processed.csv"
+
 
 FEATURE_COLUMNS = [
     "Week",
@@ -30,6 +29,7 @@ FEATURE_COLUMNS = [
     "away_avg_total_points",
 ]
 
+
 TARGET_COLUMN = "target_residual"
 
 
@@ -39,39 +39,47 @@ def load_processed_data():
     )
 
 
-def split_data(df):
-    train_df = df[
-        df["Season"] <= 2023
-    ].copy()
+def get_weekly_split(
+    df,
+    season,
+    week
+):
+    previous_seasons = df[
+        df["Season"] < season
+    ]
 
-    val_df = df[
-        df["Season"] == 2024
-    ].copy()
+    current_season_previous_weeks = df[
+        (df["Season"] == season)
+        & (df["Week"] < week)
+    ]
+
+    train_df = pd.concat(
+        [
+            previous_seasons,
+            current_season_previous_weeks
+        ],
+        ignore_index=True
+    )
 
     test_df = df[
-        df["Season"] >= 2025
+        (df["Season"] == season)
+        & (df["Week"] == week)
     ].copy()
 
     return (
         train_df,
-        val_df,
         test_df
     )
 
 
-def prepare_data(
+def prepare_train_test_data(
     train_df,
-    val_df,
     test_df
 ):
     scaler = StandardScaler()
 
     X_train = scaler.fit_transform(
         train_df[FEATURE_COLUMNS]
-    )
-
-    X_val = scaler.transform(
-        val_df[FEATURE_COLUMNS]
     )
 
     X_test = scaler.transform(
@@ -82,21 +90,12 @@ def prepare_data(
         TARGET_COLUMN
     ].values
 
-    y_val = val_df[
-        TARGET_COLUMN
-    ].values
-
     y_test = test_df[
         TARGET_COLUMN
     ].values
 
     X_train = torch.tensor(
         X_train,
-        dtype=torch.float32
-    )
-
-    X_val = torch.tensor(
-        X_val,
         dtype=torch.float32
     )
 
@@ -110,11 +109,6 @@ def prepare_data(
         dtype=torch.float32
     ).unsqueeze(1)
 
-    y_val = torch.tensor(
-        y_val,
-        dtype=torch.float32
-    ).unsqueeze(1)
-
     y_test = torch.tensor(
         y_test,
         dtype=torch.float32
@@ -122,30 +116,83 @@ def prepare_data(
 
     return (
         X_train,
-        X_val,
         X_test,
         y_train,
-        y_val,
         y_test,
         scaler
+    )
+
+
+def get_available_weeks(
+    df,
+    season
+):
+    weeks = df[
+        df["Season"] == season
+    ]["Week"].unique()
+
+    return sorted(
+        int(week)
+        for week in weeks
     )
 
 
 if __name__ == "__main__":
     df = load_processed_data()
 
-    train_df, val_df, test_df = split_data(
-        df
+    print(
+        "Dataset rows:",
+        len(df)
     )
 
     print(
-        "Train rows:",
+        "\nAvailable seasons:"
+    )
+
+    print(
+        sorted(
+            df["Season"].unique()
+        )
+    )
+
+    print(
+        "\nFeature count:",
+        len(FEATURE_COLUMNS)
+    )
+
+    example_season = 2025
+
+    print(
+        f"\nAvailable weeks in "
+        f"{example_season}:"
+    )
+
+    print(
+        get_available_weeks(
+            df,
+            example_season
+        )
+    )
+
+    example_week = 10
+
+    train_df, test_df = (
+        get_weekly_split(
+            df,
+            example_season,
+            example_week
+        )
+    )
+
+    print(
+        f"\nExample Prediction:"
+        f" {example_season} Week "
+        f"{example_week}"
+    )
+
+    print(
+        "Training rows:",
         len(train_df)
-    )
-
-    print(
-        "Validation rows:",
-        len(val_df)
     )
 
     print(
@@ -153,41 +200,29 @@ if __name__ == "__main__":
         len(test_df)
     )
 
-    print("\nTrain seasons:")
     print(
-        train_df["Season"].min(),
-        "to",
+        "Latest training season:",
         train_df["Season"].max()
     )
 
-    print("\nValidation seasons:")
+    current_season_train = train_df[
+        train_df["Season"]
+        == example_season
+    ]
+
     print(
-        val_df["Season"].unique()
+        f"{example_season} games "
+        f"already available for training:",
+        len(current_season_train)
     )
 
-    print("\nTest seasons:")
-    print(
-        test_df["Season"].unique()
-    )
-
-    (
-        X_train,
-        X_val,
-        X_test,
-        y_train,
-        y_val,
-        y_test,
-        scaler
-    ) = prepare_data(
-        train_df,
-        val_df,
-        test_df
-    )
-
-    print("\nTensor shapes:")
-    print("X_train:", X_train.shape)
-    print("y_train:", y_train.shape)
-    print("X_val:", X_val.shape)
-    print("y_val:", y_val.shape)
-    print("X_test:", X_test.shape)
-    print("y_test:", y_test.shape)
+    if len(
+        current_season_train
+    ) > 0:
+        print(
+            "Latest current-season "
+            "training week:",
+            current_season_train[
+                "Week"
+            ].max()
+        )

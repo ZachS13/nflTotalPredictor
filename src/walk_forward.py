@@ -210,17 +210,9 @@ def walk_forward():
         season_neural_errors = []
         season_baseline_errors = []
 
-        print(
-            f"\n{'#' * 65}"
-        )
-
-        print(
-            f"TESTING SEASON {season}"
-        )
-
-        print(
-            f"{'#' * 65}"
-        )
+        print(f"\n{'#' * 65}")
+        print(f"TESTING SEASON {season}")
+        print(f"{'#' * 65}")
 
         for week in available_weeks:
 
@@ -369,17 +361,9 @@ def walk_forward():
                 f"{season_baseline_mae:.2f}"
             )
 
-    print(
-        f"\n{'=' * 65}"
-    )
-
-    print(
-        "SEASON SUMMARY"
-    )
-
-    print(
-        f"{'=' * 65}"
-    )
+    print(f"\n{'=' * 65}")
+    print("SEASON SUMMARY")
+    print(f"{'=' * 65}")
 
     for (
         season,

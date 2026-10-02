@@ -140,38 +140,20 @@ def get_available_weeks(
 if __name__ == "__main__":
     df = load_processed_data()
 
-    print(
-        "Dataset rows:",
-        len(df)
-    )
+    print("Dataset rows:",len(df))
 
-    print(
-        "\nAvailable seasons:"
-    )
+    print("\nAvailable seasons:")
 
-    print(
-        sorted(
-            df["Season"].unique()
-        )
-    )
+    print(sorted(df["Season"].unique()))
 
-    print(
-        "\nFeature count:",
-        len(FEATURE_COLUMNS)
-    )
+    print("\nFeature count:",len(FEATURE_COLUMNS))
 
     example_season = 2025
 
-    print(
-        f"\nAvailable weeks in "
-        f"{example_season}:"
-    )
+    print(f"\nAvailable weeks in "f"{example_season}:")
 
     print(
-        get_available_weeks(
-            df,
-            example_season
-        )
+        get_available_weeks(df,example_season)
     )
 
     example_week = 10
@@ -190,20 +172,11 @@ if __name__ == "__main__":
         f"{example_week}"
     )
 
-    print(
-        "Training rows:",
-        len(train_df)
-    )
+    print("Training rows:",len(train_df))
 
-    print(
-        "Test rows:",
-        len(test_df)
-    )
+    print("Test rows:",len(test_df))
 
-    print(
-        "Latest training season:",
-        train_df["Season"].max()
-    )
+    print("Latest training season:",train_df["Season"].max())
 
     current_season_train = train_df[
         train_df["Season"]

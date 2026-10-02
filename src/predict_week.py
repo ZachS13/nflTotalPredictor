@@ -637,21 +637,10 @@ def predict_week():
         index=False,
     )
 
-    print(
-        "\n=============================="
-    )
-
-    print(
-        "Predictions saved to:"
-    )
-
-    print(
-        PREDICTIONS_PATH
-    )
-
-    print(
-        "==============================\n"
-    )
+    print("\n==============================")
+    print("Predictions saved to:")
+    print(PREDICTIONS_PATH)
+    print("==============================\n")
 
 
 def main():

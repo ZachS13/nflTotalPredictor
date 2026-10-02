@@ -407,62 +407,39 @@ def save_processed_data(df):
 
 
 def main():
-    print(
-        "Loading raw NFL data..."
-    )
+    print("Loading raw NFL data...")
 
     df = load_data()
 
-    print(
-        f"Raw rows: {len(df)}"
-    )
+    print(f"Raw rows: {len(df)}")
 
-    print(
-        "Cleaning regular-season games..."
-    )
+    print("Cleaning regular-season games...")
 
     df = clean_regular_season_games(
         df
     )
 
-    print(
-        f"Completed regular-season games: "
-        f"{len(df)}"
-    )
+    print(f"Completed regular-season games: {len(df)}")
 
-    print(
-        "Building team features..."
-    )
+    print("Building team features...")
 
     processed_df = build_features(
         df
     )
 
-    print(
-        f"Processed games: "
-        f"{len(processed_df)}"
-    )
+    print(f"Processed games: {len(processed_df)}")
 
-    print(
-        f"Columns: "
-        f"{len(processed_df.columns)}"
-    )
+    print(f"Columns: {len(processed_df.columns)}")
 
     save_processed_data(
         processed_df
     )
 
-    print(
-        "\nSaved processed data to:"
-    )
+    print("\nSaved processed data to:")
 
-    print(
-        PROCESSED_DATA_PATH
-    )
+    print(PROCESSED_DATA_PATH)
 
-    print(
-        "\nSample:"
-    )
+    print("\nSample:")
 
     print(
         processed_df[

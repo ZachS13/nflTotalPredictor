@@ -125,18 +125,12 @@ def walk_forward_spread(
 
     total_non_tie_games = 0
 
-    print(
-        "\n=============================="
-    )
-
+    print("\n==============================")
     print(
         "NFL RESIDUAL SPREAD "
         "WALK-FORWARD TEST"
     )
-
-    print(
-        "=============================="
-    )
+    print("==============================")
 
     for season in range(
         start_season,
@@ -536,17 +530,9 @@ def walk_forward_spread(
     # OVERALL RESULTS
     # -------------------------
 
-    print(
-        "\n\n=============================="
-    )
-
-    print(
-        "OVERALL SPREAD RESULTS"
-    )
-
-    print(
-        "=============================="
-    )
+    print("\n\n==============================")
+    print("OVERALL SPREAD RESULTS")
+    print("==============================")
 
     if all_neural_errors:
 

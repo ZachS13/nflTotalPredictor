@@ -11,7 +11,13 @@ The project currently contains two neural network models:
 - **Total Points Model** – predicts the combined number of points scored in a game.
 - **Spread Model** – predicts the expected point differential between the home and away teams.
 
-Both models use residual learning, where a simple statistical baseline is calculated first and the neural network learns how much that baseline should be adjusted. In the future more data points will be added to make the predictions better.
+Both models use residual learning, where a simple statistical baseline is calculated first and the neural network learns how much that baseline should be adjusted. In the future more data points will be added to make the predictions more accurate to the final. 
+
+As of Week 4’s Thursday night game, Pittsburgh at Cleveland, the model’s statistical baseline projected 35.6 total points and Pittsburgh by 3.33 points. That was relatively close to the pregame Vegas line of 37.5 total points and Pittsburgh by 2.5.
+
+The model’s final predictions were 39.9 total points and Cleveland by 1.1. Cleveland ultimately won the game by 3 points, while the final combined score was 51.
+
+The early takeaway is that the spread model moved in the correct direction and correctly identified Cleveland as the winner, improving on the baseline’s Pittsburgh prediction. The total-points model also adjusted upward from the baseline, but still significantly underestimated the final total. One game is not enough to judge the models overall, so the more important evaluation will come after the full Week 4 slate is complete and the predictions can be compared across every game.
 
 ## How It Works
 

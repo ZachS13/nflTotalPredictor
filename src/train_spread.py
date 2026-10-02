@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 try:
     from src.data_loader import (
         load_processed_data,
-        FEATURE_COLUMNS
+        FEATURE_COLUMNS,
     )
 
     from src.spread_model import NFLSpreadModel
@@ -15,7 +15,7 @@ try:
 except ModuleNotFoundError:
     from data_loader import (
         load_processed_data,
-        FEATURE_COLUMNS
+        FEATURE_COLUMNS,
     )
 
     from spread_model import NFLSpreadModel
@@ -35,13 +35,15 @@ SCALER_PATH = (
     / "nfl_spread_scaler.pkl"
 )
 
-TARGET_COLUMN = "home_margin"
+TARGET_COLUMN = "target_margin_residual"
 
 
 def train_spread_model():
     torch.manual_seed(42)
 
-    print("Loading processed data...")
+    print(
+        "Loading processed data..."
+    )
 
     df = load_processed_data()
 
@@ -53,12 +55,19 @@ def train_spread_model():
         f"Features: {len(FEATURE_COLUMNS)}"
     )
 
-    X = df[FEATURE_COLUMNS].values
-    y = df[TARGET_COLUMN].values
+    X = df[
+        FEATURE_COLUMNS
+    ].values
+
+    y = df[
+        TARGET_COLUMN
+    ].values
 
     scaler = StandardScaler()
 
-    X_scaled = scaler.fit_transform(X)
+    X_scaled = scaler.fit_transform(
+        X
+    )
 
     X_tensor = torch.tensor(
         X_scaled,
@@ -71,10 +80,14 @@ def train_spread_model():
     ).unsqueeze(1)
 
     model = NFLSpreadModel(
-        input_size=len(FEATURE_COLUMNS)
+        input_size=len(
+            FEATURE_COLUMNS
+        )
     )
 
-    loss_function = torch.nn.MSELoss()
+    loss_function = (
+        torch.nn.MSELoss()
+    )
 
     optimizer = torch.optim.Adam(
         model.parameters(),
@@ -83,9 +96,13 @@ def train_spread_model():
 
     epochs = 300
 
-    print("\nTraining spread model...\n")
+    print(
+        "\nTraining residual spread model...\n"
+    )
 
-    for epoch in range(epochs):
+    for epoch in range(
+        epochs
+    ):
         model.train()
 
         optimizer.zero_grad()
@@ -109,7 +126,7 @@ def train_spread_model():
         ):
             with torch.no_grad():
 
-                mae = torch.mean(
+                residual_mae = torch.mean(
                     torch.abs(
                         predictions
                         - y_tensor
@@ -117,9 +134,12 @@ def train_spread_model():
                 ).item()
 
             print(
-                f"Epoch {epoch + 1:3d}/{epochs} "
-                f"| Loss: {loss.item():.2f} "
-                f"| Margin MAE: {mae:.2f}"
+                f"Epoch "
+                f"{epoch + 1:3d}/{epochs} "
+                f"| Loss: "
+                f"{loss.item():.2f} "
+                f"| Residual MAE: "
+                f"{residual_mae:.2f}"
             )
 
     MODEL_PATH.parent.mkdir(
@@ -136,19 +156,26 @@ def train_spread_model():
         SCALER_PATH,
         "wb"
     ) as file:
+
         pickle.dump(
             scaler,
             file
         )
 
     print(
-        f"\nSpread model saved to: "
-        f"{MODEL_PATH}"
+        "\nResidual spread model saved to:"
     )
 
     print(
-        f"Spread scaler saved to: "
-        f"{SCALER_PATH}"
+        MODEL_PATH
+    )
+
+    print(
+        "\nSpread scaler saved to:"
+    )
+
+    print(
+        SCALER_PATH
     )
 
 

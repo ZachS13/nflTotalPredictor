@@ -16,7 +16,7 @@ def load_data():
 def clean_regular_season_games(df):
     df = df.copy()
 
-    # Keep only completed games
+    # Keep completed games only
     df = df[df["GameStatus"] == "FINAL"]
 
     # Keep regular-season weeks only
@@ -29,7 +29,7 @@ def clean_regular_season_games(df):
         .astype(int)
     )
 
-    # Remove rows missing required game information
+    # Remove rows missing required game data
     df = df.dropna(
         subset=[
             "Season",
@@ -46,7 +46,7 @@ def clean_regular_season_games(df):
     df["HomeScore"] = df["HomeScore"].astype(int)
     df["AwayScore"] = df["AwayScore"].astype(int)
 
-    # Process games in chronological order
+    # Keep games in chronological order
     df = df.sort_values(
         by=["Season", "Week"]
     ).reset_index(drop=True)
@@ -94,21 +94,11 @@ def get_team_features(history):
         history["recent_points_allowed"]
     )
 
-    last_3_points = (
-        recent_points[-3:]
-    )
+    last_3_points = recent_points[-3:]
+    last_3_allowed = recent_points_allowed[-3:]
 
-    last_3_allowed = (
-        recent_points_allowed[-3:]
-    )
-
-    last_5_points = (
-        recent_points[-5:]
-    )
-
-    last_5_allowed = (
-        recent_points_allowed[-5:]
-    )
+    last_5_points = recent_points[-5:]
+    last_5_allowed = recent_points_allowed[-5:]
 
     last_3_ppg = (
         sum(last_3_points)
@@ -140,13 +130,10 @@ def get_team_features(history):
         "points_allowed": points_allowed,
         "win_pct": win_pct,
         "last_3_ppg": last_3_ppg,
-        "last_3_points_allowed":
-            last_3_points_allowed,
+        "last_3_points_allowed": last_3_points_allowed,
         "last_5_ppg": last_5_ppg,
-        "last_5_points_allowed":
-            last_5_points_allowed,
-        "avg_total_points":
-            avg_total_points,
+        "last_5_points_allowed": last_5_points_allowed,
+        "avg_total_points": avg_total_points,
     }
 
 
@@ -156,14 +143,8 @@ def update_team_history(
     points_allowed,
 ):
     history["games"] += 1
-
-    history["points_scored"] += (
-        points_scored
-    )
-
-    history["points_allowed"] += (
-        points_allowed
-    )
+    history["points_scored"] += points_scored
+    history["points_allowed"] += points_allowed
 
     if points_scored > points_allowed:
         history["wins"] += 1
@@ -172,9 +153,7 @@ def update_team_history(
         points_scored
     )
 
-    history[
-        "recent_points_allowed"
-    ].append(
+    history["recent_points_allowed"].append(
         points_allowed
     )
 
@@ -190,71 +169,50 @@ def build_features(df):
 
     for _, game in df.iterrows():
 
-        season = int(
-            game["Season"]
-        )
+        season = int(game["Season"])
+        week = int(game["Week"])
 
-        week = int(
-            game["Week"]
-        )
+        home_team = game["HomeTeam"]
+        away_team = game["AwayTeam"]
 
-        home_team = (
-            game["HomeTeam"]
-        )
+        home_score = int(game["HomeScore"])
+        away_score = int(game["AwayScore"])
 
-        away_team = (
-            game["AwayTeam"]
-        )
-
-        home_score = int(
-            game["HomeScore"]
-        )
-
-        away_score = int(
-            game["AwayScore"]
-        )
-
-        # Reset histories at the
-        # beginning of each season
+        # Reset histories each season
         if current_season != season:
-
             current_season = season
 
             team_histories = defaultdict(
                 create_team_history
             )
 
-        home_history = (
-            team_histories[home_team]
+        home_history = team_histories[
+            home_team
+        ]
+
+        away_history = team_histories[
+            away_team
+        ]
+
+        # Build features BEFORE updating
+        # with the current game's result
+        home_features = get_team_features(
+            home_history
         )
 
-        away_history = (
-            team_histories[away_team]
+        away_features = get_team_features(
+            away_history
         )
 
-        # Generate features BEFORE
-        # updating with current game
-        home_features = (
-            get_team_features(
-                home_history
-            )
-        )
-
-        away_features = (
-            get_team_features(
-                away_history
-            )
-        )
-
-        # Skip games where either
-        # team has no prior games
+        # Both teams need at least one
+        # previous game in the season
         if (
             home_features is not None
             and away_features is not None
         ):
 
             # -------------------------
-            # TOTAL POINTS TARGET
+            # TOTAL POINTS
             # -------------------------
 
             total_points = (
@@ -273,17 +231,16 @@ def build_features(df):
             )
 
             # -------------------------
-            # SPREAD / MARGIN TARGET
+            # SPREAD / MARGIN
             # -------------------------
 
-            # Positive means home team won
-            # Negative means away team won
+            # Positive = home team won
+            # Negative = away team won
             home_margin = (
                 home_score
                 - away_score
             )
 
-            # Team scoring differential
             home_scoring_diff = (
                 home_features["ppg"]
                 - home_features[
@@ -298,32 +255,29 @@ def build_features(df):
                 ]
             )
 
-            # Positive = home team favored
-            # Negative = away team favored
+            # Positive = favors home
+            # Negative = favors away
             baseline_margin = (
                 home_scoring_diff
                 - away_scoring_diff
+            )
+
+            # Neural network spread target
+            target_margin_residual = (
+                home_margin
+                - baseline_margin
             )
 
             processed_games.append(
                 {
                     "Season": season,
                     "Week": week,
+                    "HomeTeam": home_team,
+                    "AwayTeam": away_team,
 
-                    "HomeTeam":
-                        home_team,
-
-                    "AwayTeam":
-                        away_team,
-
-                    # -----------------
                     # HOME FEATURES
-                    # -----------------
-
                     "home_ppg":
-                        home_features[
-                            "ppg"
-                        ],
+                        home_features["ppg"],
 
                     "home_points_allowed":
                         home_features[
@@ -360,14 +314,9 @@ def build_features(df):
                             "avg_total_points"
                         ],
 
-                    # -----------------
                     # AWAY FEATURES
-                    # -----------------
-
                     "away_ppg":
-                        away_features[
-                            "ppg"
-                        ],
+                        away_features["ppg"],
 
                     "away_points_allowed":
                         away_features[
@@ -404,10 +353,7 @@ def build_features(df):
                             "avg_total_points"
                         ],
 
-                    # -----------------
                     # TOTAL TARGETS
-                    # -----------------
-
                     "baseline_total":
                         baseline_total,
 
@@ -417,20 +363,20 @@ def build_features(df):
                     "target_residual":
                         target_residual,
 
-                    # -----------------
                     # SPREAD TARGETS
-                    # -----------------
-
                     "baseline_margin":
                         baseline_margin,
 
                     "home_margin":
                         home_margin,
+
+                    "target_margin_residual":
+                        target_margin_residual,
                 }
             )
 
-        # Update histories only AFTER
-        # features were generated
+        # Update histories AFTER creating
+        # features for this game
         update_team_history(
             home_history,
             home_score,
@@ -480,8 +426,8 @@ def main():
     )
 
     print(
-        "Completed regular-season "
-        f"games: {len(df)}"
+        f"Completed regular-season games: "
+        f"{len(df)}"
     )
 
     print(
@@ -529,6 +475,7 @@ def main():
                 "baseline_total",
                 "home_margin",
                 "baseline_margin",
+                "target_margin_residual",
             ]
         ].tail()
     )

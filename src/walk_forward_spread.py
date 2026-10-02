@@ -1,12 +1,13 @@
-import torch
 import numpy as np
+import torch
+
+from sklearn.preprocessing import StandardScaler
 
 try:
     from src.data_loader import (
         load_processed_data,
         FEATURE_COLUMNS,
         get_weekly_split,
-        prepare_train_test_data,
         get_available_weeks,
     )
 
@@ -17,24 +18,32 @@ except ModuleNotFoundError:
         load_processed_data,
         FEATURE_COLUMNS,
         get_weekly_split,
-        prepare_train_test_data,
         get_available_weeks,
     )
 
     from spread_model import NFLSpreadModel
 
 
-SPREAD_TARGET = "home_margin"
+SPREAD_TARGET = (
+    "target_margin_residual"
+)
 
 
-def train_model(X_train, y_train):
+def train_model(
+    X_train,
+    y_train
+):
     torch.manual_seed(42)
 
     model = NFLSpreadModel(
-        input_size=len(FEATURE_COLUMNS)
+        input_size=len(
+            FEATURE_COLUMNS
+        )
     )
 
-    loss_function = torch.nn.MSELoss()
+    loss_function = (
+        torch.nn.MSELoss()
+    )
 
     optimizer = torch.optim.Adam(
         model.parameters(),
@@ -43,12 +52,16 @@ def train_model(X_train, y_train):
 
     epochs = 300
 
-    for _ in range(epochs):
+    for _ in range(
+        epochs
+    ):
         model.train()
 
         optimizer.zero_grad()
 
-        predictions = model(X_train)
+        predictions = model(
+            X_train
+        )
 
         loss = loss_function(
             predictions,
@@ -65,18 +78,20 @@ def train_model(X_train, y_train):
 def format_spread(
     home_team,
     away_team,
-    predicted_home_margin
+    home_margin
 ):
-    if predicted_home_margin > 0:
+    if home_margin > 0:
+
         return (
             f"{home_team} "
-            f"-{abs(predicted_home_margin):.1f}"
+            f"-{abs(home_margin):.1f}"
         )
 
-    if predicted_home_margin < 0:
+    if home_margin < 0:
+
         return (
             f"{away_team} "
-            f"-{abs(predicted_home_margin):.1f}"
+            f"-{abs(home_margin):.1f}"
         )
 
     return "PICK"
@@ -97,7 +112,7 @@ def get_winner_from_margin(
 
 
 def walk_forward_spread(
-    start_season=2021,
+    start_season=2010,
     end_season=2026
 ):
     df = load_processed_data()
@@ -107,11 +122,21 @@ def walk_forward_spread(
 
     neural_winner_correct = 0
     baseline_winner_correct = 0
+
     total_non_tie_games = 0
 
-    print("\n==============================")
-    print("NFL SPREAD WALK-FORWARD TEST")
-    print("==============================")
+    print(
+        "\n=============================="
+    )
+
+    print(
+        "NFL RESIDUAL SPREAD "
+        "WALK-FORWARD TEST"
+    )
+
+    print(
+        "=============================="
+    )
 
     for season in range(
         start_season,
@@ -123,7 +148,8 @@ def walk_forward_spread(
 
         season_neural_wins = 0
         season_baseline_wins = 0
-        season_games = 0
+
+        season_non_tie_games = 0
 
         weeks = get_available_weeks(
             df,
@@ -131,7 +157,9 @@ def walk_forward_spread(
         )
 
         print(
-            f"\n\n========== {season} =========="
+            f"\n\n========== "
+            f"{season} "
+            f"=========="
         )
 
         for week in weeks:
@@ -151,19 +179,21 @@ def walk_forward_spread(
                 continue
 
             # -------------------------
-            # PREPARE TRAINING DATA
+            # SCALE FEATURES
             # -------------------------
-
-            from sklearn.preprocessing import StandardScaler
 
             scaler = StandardScaler()
 
             X_train = scaler.fit_transform(
-                train_df[FEATURE_COLUMNS]
+                train_df[
+                    FEATURE_COLUMNS
+                ]
             )
 
             X_test = scaler.transform(
-                test_df[FEATURE_COLUMNS]
+                test_df[
+                    FEATURE_COLUMNS
+                ]
             )
 
             y_train = train_df[
@@ -197,49 +227,74 @@ def walk_forward_spread(
             model.eval()
 
             with torch.no_grad():
-                predicted_margins = (
-                    model(X_test)
+
+                predicted_residuals = (
+                    model(
+                        X_test
+                    )
                     .squeeze(1)
                     .numpy()
                 )
 
-            actual_margins = (
-                test_df["home_margin"]
-                .values
-            )
+            # -------------------------
+            # CREATE FINAL MARGINS
+            # -------------------------
 
             baseline_margins = (
-                test_df["baseline_margin"]
-                .values
+                test_df[
+                    "baseline_margin"
+                ].values
+            )
+
+            predicted_margins = (
+                baseline_margins
+                + predicted_residuals
+            )
+
+            actual_margins = (
+                test_df[
+                    "home_margin"
+                ].values
             )
 
             week_neural_errors = []
             week_baseline_errors = []
 
             print(
-                f"\n{season} Week {week}"
+                f"\n{season} "
+                f"Week {week}"
             )
 
             # -------------------------
-            # GAME-BY-GAME RESULTS
+            # GAME RESULTS
             # -------------------------
 
             for i, (_, game) in enumerate(
                 test_df.iterrows()
             ):
-                home_team = game["HomeTeam"]
-                away_team = game["AwayTeam"]
+
+                home_team = (
+                    game["HomeTeam"]
+                )
+
+                away_team = (
+                    game["AwayTeam"]
+                )
+
+                neural_adjustment = float(
+                    predicted_residuals[i]
+                )
 
                 predicted_margin = float(
                     predicted_margins[i]
                 )
 
-                actual_margin = float(
-                    actual_margins[i]
-                )
-
                 baseline_margin = float(
                     baseline_margins[i]
+                )
+
+                actual_margin = float(
+                    actual_margins[i]
                 )
 
                 neural_error = abs(
@@ -300,16 +355,18 @@ def walk_forward_spread(
                     )
                 )
 
-                # Ignore ties for winner accuracy
                 if actual_winner != "TIE":
+
                     total_non_tie_games += 1
-                    season_games += 1
+
+                    season_non_tie_games += 1
 
                     if (
                         neural_winner
                         == actual_winner
                     ):
                         neural_winner_correct += 1
+
                         season_neural_wins += 1
 
                     if (
@@ -317,6 +374,7 @@ def walk_forward_spread(
                         == actual_winner
                     ):
                         baseline_winner_correct += 1
+
                         season_baseline_wins += 1
 
                 predicted_spread = (
@@ -344,36 +402,42 @@ def walk_forward_spread(
                 )
 
                 print(
-                    f"{away_team} @ {home_team}"
+                    f"{away_team} "
+                    f"@ {home_team}"
                 )
 
                 print(
-                    f"  Neural Spread:   "
-                    f"{predicted_spread}"
-                )
-
-                print(
-                    f"  Baseline Spread: "
+                    f"  Baseline Spread:    "
                     f"{baseline_spread}"
                 )
 
                 print(
-                    f"  Actual Margin:   "
+                    f"  Neural Adjustment:  "
+                    f"{neural_adjustment:+.2f}"
+                )
+
+                print(
+                    f"  Neural Spread:      "
+                    f"{predicted_spread}"
+                )
+
+                print(
+                    f"  Actual Margin:      "
                     f"{actual_spread}"
                 )
 
                 print(
-                    f"  Neural Error:    "
+                    f"  Neural Error:       "
                     f"{neural_error:.2f}"
                 )
 
                 print(
-                    f"  Baseline Error:  "
+                    f"  Baseline Error:     "
                     f"{baseline_error:.2f}"
                 )
 
             # -------------------------
-            # WEEKLY RESULTS
+            # WEEK RESULTS
             # -------------------------
 
             if week_neural_errors:
@@ -420,25 +484,32 @@ def walk_forward_spread(
                 )
             )
 
-            if season_games > 0:
+            if (
+                season_non_tie_games > 0
+            ):
+
                 season_neural_accuracy = (
                     season_neural_wins
-                    / season_games
+                    / season_non_tie_games
                     * 100
                 )
 
                 season_baseline_accuracy = (
                     season_baseline_wins
-                    / season_games
+                    / season_non_tie_games
                     * 100
                 )
 
             else:
+
                 season_neural_accuracy = 0
+
                 season_baseline_accuracy = 0
 
             print(
-                f"\n===== {season} RESULTS ====="
+                f"\n===== "
+                f"{season} "
+                f"RESULTS ====="
             )
 
             print(

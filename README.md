@@ -1,43 +1,57 @@
-# NFL Total Points Predictor
+# NFL Game Predictor
 
 ## Overview
 
-The NFL Total Points Predictor is a machine learning project built with Python and PyTorch that predicts the combined total score of NFL games using historical and current-season team performance.
+The NFL Game Predictor is a machine learning project built with Python and PyTorch that predicts NFL game totals and point spreads using historical and current-season team performance.
 
-The project was created as a way to learn more about machine learning, neural networks, feature engineering, model evaluation, and using trained models to make real-world predictions.
+The project was created to learn more about machine learning, neural networks, feature engineering, model evaluation, and using trained models to make real-world predictions.
 
-Rather than predicting the game total entirely from scratch, the current model uses a simple statistical baseline and trains a neural network to predict how much that baseline should be adjusted.
+The project currently contains two neural network models:
+
+- **Total Points Model** – predicts the combined number of points scored in a game.
+- **Spread Model** – predicts the expected point differential between the home and away teams.
+
+Both models use residual learning, where a simple statistical baseline is calculated first and the neural network learns how much that baseline should be adjusted.
 
 ## How It Works
 
-The prediction system follows this general process:
+Historical NFL game results are processed into pregame team statistics.
 
-1. Load historical NFL game results.
-2. Calculate team statistics using only games played before the game being predicted.
-3. Create a baseline total using each team's scoring average.
-4. Pass additional team statistics into a PyTorch neural network.
-5. Predict an adjustment to the baseline.
-6. Add the neural adjustment to the baseline to produce the final predicted total.
+The model only uses information that would have been available before the game being predicted.
 
-Example:
+The general prediction pipeline is:
 
 ```text
-Baseline Total:      45.7
-Neural Adjustment:   +4.4
-Predicted Total:     50.1
+Historical NFL Games
+        ↓
+Feature Engineering
+        ↓
+Statistical Baseline
+        ↓
+Neural Network Adjustment
+        ↓
+Final Prediction
 ```
 
-The neural network is learning when the simple scoring-average baseline tends to be too high or too low.
+For an upcoming game, the system can produce results such as:
+
+```text
+BUF @ NE
+
+Predicted Total: 49.8
+Predicted Spread: BUF -5.7
+Predicted Winner: BUF
+```
 
 ## Current Features
 
-The model currently uses 17 input features.
+The models currently use 17 input features.
 
 ### Game Information
 
 - Week
 
-### Home Team
+### Home Team Features
 
 - Points per game
 - Points allowed per game
@@ -48,7 +62,7 @@ The model currently uses 17 input features.
 - Last 5 games points allowed
 - Average total points in games
 
-### Away Team
+### Away Team Features
 
 - Points per game
 - Points allowed per game
@@ -59,11 +73,13 @@ The model currently uses 17 input features.
 - Last 5 games points allowed
 - Average total points in games
 
-All statistics are calculated using only information that would have been available before the game being predicted.
+Team histories reset at the beginning of each NFL season.
 
-## Model Architecture
+Features are calculated before the current game's result is added to team history to prevent future information from leaking into the prediction.
 
-The current PyTorch neural network is a feed-forward regression model.
+## Neural Network Architecture
+
+Both models currently use the same feed-forward neural network structure:
 
 ```text
 17 Input Features
@@ -83,85 +99,291 @@ ReLU
 1 Output
 ```
 
-The final output represents the predicted adjustment to the baseline total.
+The models currently use:
 
-The model currently uses:
-
+- PyTorch
 - Mean Squared Error loss
 - Adam optimizer
 - StandardScaler feature normalization
 - 300 training epochs
 
-## Residual Learning
-
-The first version of the project attempted to directly predict the total number of points scored in a game.
-
-A simple baseline using:
+The output has a different meaning depending on the model.
 
 ```text
-Home PPG + Away PPG
+Total Model
+→ Total Points Adjustment
+
+Spread Model
+→ Point Margin Adjustment
 ```
 
-performed better than the original neural network.
+## Total Points Model
 
-The model was then changed to use residual learning.
+The original version of the project trained a neural network to directly predict the total number of points scored.
 
-Instead of predicting:
+A simple statistical baseline performed better than the original neural network, so the model was changed to use residual learning.
+
+### Total Baseline
+
+The current baseline is:
 
 ```text
-Neural Network → Total Points
+Baseline Total =
+Home Points Per Game
++
+Away Points Per Game
 ```
 
-the current model predicts:
+For example:
 
 ```text
-Neural Network → Baseline Adjustment
+Home PPG: 26.7
+Away PPG: 22.3
+
+Baseline Total: 49.0
 ```
 
-The final prediction becomes:
+The neural network then predicts how much this baseline should be adjusted.
+
+```text
+Baseline Total:      49.0
+Neural Adjustment:   -4.2
+Predicted Total:     44.8
+```
+
+The training target is:
+
+```text
+Target Residual =
+Actual Total - Baseline Total
+```
+
+The final prediction is:
 
 ```text
 Predicted Total =
 Baseline Total + Neural Adjustment
 ```
 
-This approach improved performance over the simple baseline during historical testing.
+## Spread Model
 
-## Walk-Forward Evaluation
+The spread model predicts the expected point differential between the two teams.
 
-To avoid data leakage and more realistically simulate real predictions, the project uses weekly walk-forward validation.
+Historical point margin is calculated as:
+
+```text
+Home Margin =
+Home Score - Away Score
+```
+
+A positive value means the home team won.
+
+```text
+Home 31
+Away 24
+
+Home Margin = +7
+```
+
+A negative value means the away team won.
+
+```text
+Home 20
+Away 27
+
+Home Margin = -7
+```
+
+Internally, the model always predicts from the home team's perspective.
+
+The result is converted into standard spread-style output when displayed.
 
 For example:
 
 ```text
-Predict Week 5
-
-Training Data:
-2010–2025
-+
-Current Season Weeks 2–4
-
-Test Data:
-Current Season Week 5
+Predicted Home Margin: -6.4
 ```
 
-After Week 5 is completed, those games become available for training when predicting Week 6.
-
-This process is repeated throughout each season.
-
-## Current Historical Results
-
-The model was walk-forward tested across 1,311 NFL games.
+means:
 
 ```text
+Away Team -6.4
+```
+
+## Spread Baseline
+
+The spread model also uses a statistical baseline.
+
+First, each team's average scoring differential is calculated.
+
+```text
+Home Scoring Differential =
+Home PPG - Home Points Allowed
+
+Away Scoring Differential =
+Away PPG - Away Points Allowed
+```
+
+The baseline margin is then:
+
+```text
+Baseline Margin =
+Home Scoring Differential
+-
+Away Scoring Differential
+```
+
+For example:
+
+```text
+Home Team
+
+PPG:             28
+Points Allowed:  21
+
+Scoring Differential: +7
+```
+
+```text
+Away Team
+
+PPG:             24
+Points Allowed:  26
+
+Scoring Differential: -2
+```
+
+The resulting baseline is:
+
+```text
+Baseline Margin = +7 - (-2)
+
+Baseline Margin = +9
+```
+
+This means the baseline expects the home team to win by approximately 9 points.
+
+## Spread Residual Learning
+
+The first spread model directly predicted the actual home margin.
+
+Historical walk-forward testing produced:
+
+```text
+Games Tested:             3,934
+
+Neural Margin MAE:        11.96
+Baseline Margin MAE:      12.00
+MAE Improvement:          +0.04
+
+Neural Winner Accuracy:   59.56%
+Baseline Winner Accuracy: 61.47%
+```
+
+The spread model was then changed to residual learning.
+
+Instead of predicting:
+
+```text
+Neural Network → Home Margin
+```
+
+the model now predicts:
+
+```text
+Neural Network → Baseline Margin Adjustment
+```
+
+The training target is:
+
+```text
+Target Margin Residual =
+Actual Home Margin
+-
+Baseline Margin
+```
+
+The final prediction is:
+
+```text
+Predicted Home Margin =
+Baseline Margin
++
+Neural Adjustment
+```
+
+For example:
+
+```text
+Baseline Margin:      -3.2
+Neural Adjustment:    -2.4
+
+Predicted Margin:     -5.6
+```
+
+If the away team is Buffalo, the displayed prediction becomes:
+
+```text
+BUF -5.6
+```
+
+## Current Spread Results
+
+After changing the spread model to residual learning, historical walk-forward results improved.
+
+```text
+Games Tested:             3,934
+
+Neural Margin MAE:        11.55
+Baseline Margin MAE:      12.00
+MAE Improvement:          +0.45
+
+Neural Winner Accuracy:   60.07%
+Baseline Winner Accuracy: 61.47%
+```
+
+The residual neural network improved point-margin accuracy compared with both the original direct neural network and the statistical baseline.
+
+The statistical baseline currently remains slightly more accurate at selecting the winning team.
+
+## Walk-Forward Validation
+
+Both prediction systems are evaluated using weekly walk-forward testing.
+
+This simulates how the models would have performed if they had actually been running during previous NFL seasons.
+
+For example, when predicting Week 10 of the 2025 season:
+
+```text
+Training Data:
+
+2010–2024
++
+2025 Weeks before Week 10
+```
+
+The model then predicts:
+
+```text
+2025 Week 10
+```
+
+After Week 10 is completed, those games become available when predicting Week 11.
+
+This process prevents the model from training on games that occurred after the game being tested.
+
+## Total Model Historical Performance
+
+The total-points model has also been evaluated using weekly walk-forward testing.
+
+```text
+Games Tested:       1,311
 Neural Network MAE: 10.99
 Baseline MAE:       11.46
 MAE Improvement:    +0.47
 ```
 
-The neural network outperformed the baseline in each tested season from 2021 through 2026.
-
-### Season Results
+Season results:
 
 ```text
 2021: Neural 10.97 | Baseline 11.89 | Improvement +0.92
@@ -172,31 +394,47 @@ The neural network outperformed the baseline in each tested season from 2021 thr
 2026: Neural 13.18 | Baseline 14.38 | Improvement +1.20
 ```
 
-## Current Prediction Workflow
+The residual neural network outperformed the simple total-points baseline across each tested season.
 
-The project contains a separate model used for upcoming-game predictions.
+## Current Prediction Pipeline
+
+Upcoming-game predictions now combine both trained neural networks.
 
 ```text
-Raw NFL Data
-      ↓
+Completed NFL Games
+        ↓
 Preprocessing
-      ↓
-Feature Engineering
-      ↓
-Train Current Model
-      ↓
-Load Upcoming Matchups
-      ↓
-Calculate Current Team Statistics
-      ↓
-Baseline Prediction
-      ↓
-Neural Adjustment
-      ↓
-Final Predicted Total
+        ↓
+Current Team Statistics
+        ↓
+        ├───────────────┐
+        ↓               ↓
+Total Baseline     Spread Baseline
+        ↓               ↓
+Total Model        Spread Model
+        ↓               ↓
+Adjustment         Adjustment
+        ↓               ↓
+Predicted Total    Predicted Margin
+        └───────┬───────┘
+                ↓
+        Weekly Predictions
 ```
 
-The current model is retrained using all completed games available at the time of prediction.
+A weekly prediction can contain:
+
+```text
+BUF @ NE
+
+Baseline Total:       45.7
+Total Adjustment:     +4.4
+Predicted Total:      50.1
+
+Baseline Margin:      -3.2
+Spread Adjustment:    -2.4
+Predicted Spread:     BUF -5.6
+Predicted Winner:     BUF
+```
 
 ## Project Structure
 
@@ -215,23 +453,25 @@ nflTotalPredictor/
 │       └── predictions.csv
 │
 ├── models/
-│   ├── nfl_total_model.pth
 │   ├── nfl_current_model.pth
-│   └── nfl_current_scaler.pkl
+│   ├── nfl_current_scaler.pkl
+│   ├── nfl_spread_model.pth
+│   └── nfl_spread_scaler.pkl
 │
 ├── src/
 │   ├── preprocess.py
 │   ├── data_loader.py
 │   ├── model.py
+│   ├── spread_model.py
 │   ├── train.py
+│   ├── train_current.py
+│   ├── train_spread.py
 │   ├── evaluate.py
 │   ├── walk_forward.py
-│   ├── train_current.py
+│   ├── walk_forward_spread.py
 │   └── predict_week.py
 │
 ├── tests/
-│   ├── test_preprocess.py
-│   └── test_model.py
 │
 ├── .gitignore
 ├── README.md
@@ -241,53 +481,67 @@ nflTotalPredictor/
 
 ## Running the Project
 
-Activate the virtual environment:
+Activate the Python virtual environment:
 
 ```powershell
 .\venv\Scripts\Activate.ps1
 ```
 
-Run the full prediction workflow:
-
-```powershell
-python .\main.py
-```
-
-This will:
-
-1. Preprocess the raw NFL data.
-2. Train the current neural network.
-3. Generate predictions for the upcoming games.
-
-## Running Individual Components
-
-Each part of the project can also be run separately.
-
-### Preprocess Data
+### Preprocess Historical Data
 
 ```powershell
 python .\src\preprocess.py
 ```
 
-### Historical Walk-Forward Testing
+This creates the processed training data and calculates:
 
-```powershell
-python .\src\walk_forward.py
-```
+- Team features
+- Total baseline
+- Total residual
+- Actual total
+- Spread baseline
+- Actual home margin
+- Spread residual
 
-### Train Current Model
+### Train the Current Total Model
 
 ```powershell
 python .\src\train_current.py
 ```
 
-### Predict Upcoming Games
+This creates:
 
-```powershell
-python .\src\predict_week.py
+```text
+models/nfl_current_model.pth
+models/nfl_current_scaler.pkl
 ```
 
-## Upcoming Games
+### Train the Current Spread Model
+
+```powershell
+python .\src\train_spread.py
+```
+
+This creates:
+
+```text
+models/nfl_spread_model.pth
+models/nfl_spread_scaler.pkl
+```
+
+### Walk-Forward Test Total Predictions
+
+```powershell
+python .\src\walk_forward.py
+```
+
+### Walk-Forward Test Spread Predictions
+
+```powershell
+python .\src\walk_forward_spread.py
+```
+
+### Generate Upcoming Predictions
 
 Upcoming matchups are stored in:
 
@@ -295,13 +549,10 @@ Upcoming matchups are stored in:
 data/upcoming/upcoming_games.csv
 ```
 
-Example:
+Run:
 
-```csv
-Season,Week,AwayTeam,HomeTeam
-2026,4,PIT,CLE
-2026,4,NE,BUF
-2026,4,KC,LV
+```powershell
+python .\src\predict_week.py
 ```
 
 Predictions are saved to:
@@ -310,25 +561,30 @@ Predictions are saved to:
 data/upcoming/predictions.csv
 ```
 
-Example:
+The prediction file contains:
 
-```csv
-Season,Week,AwayTeam,HomeTeam,BaselineTotal,NeuralAdjustment,PredictedTotal
-2026,4,PIT,CLE,35.67,4.26,39.92
-2026,4,NE,BUF,45.67,4.38,50.04
-2026,4,KC,LV,58.67,-9.64,49.02
+```text
+Season
+Week
+AwayTeam
+HomeTeam
+
+BaselineTotal
+TotalAdjustment
+PredictedTotal
+
+BaselineMargin
+SpreadAdjustment
+PredictedHomeMargin
+PredictedSpread
+PredictedWinner
 ```
 
 ## Technology
 
 - Python
-
 - PyTorch
-
 - Pandas
-
 - NumPy
-
 - Scikit-learn
-
 - Matplotlib

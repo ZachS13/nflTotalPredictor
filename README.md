@@ -11,7 +11,7 @@ The project currently contains two neural network models:
 - **Total Points Model** – predicts the combined number of points scored in a game.
 - **Spread Model** – predicts the expected point differential between the home and away teams.
 
-Both models use residual learning, where a simple statistical baseline is calculated first and the neural network learns how much that baseline should be adjusted.
+Both models use residual learning, where a simple statistical baseline is calculated first and the neural network learns how much that baseline should be adjusted. In the future more data points will be added to make the predictions better.
 
 ## How It Works
 
@@ -443,10 +443,10 @@ nflTotalPredictor/
 │
 ├── data/
 │   ├── raw/
-│   │   └── games.csv
+│   │   └── 2010-2026_scores.csv
 │   │
 │   ├── processed/
-│   │   └── games_processed.csv
+│   │   └── 2010-2026_scores_processed.csv
 │   │
 │   └── upcoming/
 │       ├── upcoming_games.csv
